@@ -31,7 +31,35 @@ npm init playwright@latest
 npm init playwright@latest new-project
 ```
 
+ℹ️ This is currently not working and throws an error
+
+```bash
+npx playwright install
+node:internal/modules/cjs/loader:657
+      throw e;
+      ^
+
+Error: Cannot find module '/Users/macbook/Desktop/Github/playwright/node_modules/@playwright/experimental-ct-core/lib/program.js'
+    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1405:15)
+    at finalizeEsmResolution (node:internal/modules/cjs/loader:1394:15)
+    at resolveExports (node:internal/modules/cjs/loader:650:14)
+    at Module._findPath (node:internal/modules/cjs/loader:717:31)
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1355:27)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Module._load (node:internal/modules/cjs/loader:1179:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24) {
+  code: 'MODULE_NOT_FOUND',
+  path: '/Users/macbook/Desktop/Github/playwright/node_modules/@playwright/experimental-ct-core'
+}
+
+Node.js v24.3.0
+
+
 This will create a configuration file, optionally add examples, a GitHub Action workflow and a first test example.spec.ts. You can now jump directly to writing assertions section.
+
+```
 
 ### Manually
 
