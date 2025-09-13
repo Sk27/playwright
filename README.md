@@ -1,4 +1,4 @@
-# 🎭 Playwright
+# Playwright
 
 [![npm version](https://img.shields.io/npm/v/playwright.svg)](https://www.npmjs.com/package/playwright) <!-- GEN:chromium-version-badge -->[![Chromium version](https://img.shields.io/badge/chromium-140.0.7339.41-blue.svg?logo=google-chrome)](https://www.chromium.org/Home)<!-- GEN:stop --> <!-- GEN:firefox-version-badge -->[![Firefox version](https://img.shields.io/badge/firefox-141.0-blue.svg?logo=firefoxbrowser)](https://www.mozilla.org/en-US/firefox/new/)<!-- GEN:stop --> <!-- GEN:webkit-version-badge -->[![WebKit version](https://img.shields.io/badge/webkit-26.0-blue.svg?logo=safari)](https://webkit.org/)<!-- GEN:stop --> [![Join Discord](https://img.shields.io/badge/join-discord-informational)](https://aka.ms/playwright/discord)
 
@@ -30,31 +30,7 @@ npm init playwright@latest
 # Or create a new project
 npm init playwright@latest new-project
 ```
-
-ℹ️ This is currently not working and throws an error
-
-```bash
-npx playwright install
-node:internal/modules/cjs/loader:657
-      throw e;
-      ^
-
-Error: Cannot find module '/Users/macbook/Desktop/Github/playwright/node_modules/@playwright/experimental-ct-core/lib/program.js'
-    at createEsmNotFoundErr (node:internal/modules/cjs/loader:1405:15)
-    at finalizeEsmResolution (node:internal/modules/cjs/loader:1394:15)
-    at resolveExports (node:internal/modules/cjs/loader:650:14)
-    at Module._findPath (node:internal/modules/cjs/loader:717:31)
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1355:27)
-    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
-    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
-    at Module._load (node:internal/modules/cjs/loader:1179:37)
-    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:235:24) {
-  code: 'MODULE_NOT_FOUND',
-  path: '/Users/macbook/Desktop/Github/playwright/node_modules/@playwright/experimental-ct-core'
-}
-
-Node.js v24.3.0
+- This fails - check
 
 
 This will create a configuration file, optionally add examples, a GitHub Action workflow and a first test example.spec.ts. You can now jump directly to writing assertions section.
@@ -75,32 +51,6 @@ You can optionally install only selected browsers, see [install browsers](https:
 
 * [Getting started](https://playwright.dev/docs/intro)
 * [API reference](https://playwright.dev/docs/api/class-playwright)
-
-## Capabilities
-
-### Resilient • No flaky tests
-
-**Auto-wait**. Playwright waits for elements to be actionable prior to performing actions. It also has a rich set of introspection events. The combination of the two eliminates the need for artificial timeouts - a primary cause of flaky tests.
-
-**Web-first assertions**. Playwright assertions are created specifically for the dynamic web. Checks are automatically retried until the necessary conditions are met.
-
-**Tracing**. Configure test retry strategy, capture execution trace, videos and screenshots to eliminate flakes.
-
-### No trade-offs • No limits
-
-Browsers run web content belonging to different origins in different processes. Playwright is aligned with the architecture of the modern browsers and runs tests out-of-process. This makes Playwright free of the typical in-process test runner limitations.
-
-**Multiple everything**. Test scenarios that span multiple tabs, multiple origins and multiple users. Create scenarios with different contexts for different users and run them against your server, all in one test.
-
-**Trusted events**. Hover elements, interact with dynamic controls and produce trusted events. Playwright uses real browser input pipeline indistinguishable from the real user.
-
-Test frames, pierce Shadow DOM. Playwright selectors pierce shadow DOM and allow entering frames seamlessly.
-
-### Full isolation • Fast execution
-
-**Browser contexts**. Playwright creates a browser context for each test. Browser context is equivalent to a brand new browser profile. This delivers full test isolation with zero overhead. Creating a new browser context only takes a handful of milliseconds.
-
-**Log in once**. Save the authentication state of the context and reuse it in all the tests. This bypasses repetitive log-in operations in each test, yet delivers full isolation of independent tests.
 
 ### Powerful Tooling
 
