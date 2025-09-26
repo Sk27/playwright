@@ -82,3 +82,8 @@ export async function generateLocator(locator: playwright.Locator): Promise<stri
 export async function callOnPageNoTrace<T>(page: playwright.Page, callback: (page: playwright.Page) => Promise<T>): Promise<T> {
   return await (page as any)._wrapApiCall(() => callback(page), { internal: true });
 }
+
+export function dateAsFileName(extension: string): string {
+  const date = new Date();
+  return `page-${date.toISOString().replace(/[:.]/g, '-')}.${extension}`;
+}

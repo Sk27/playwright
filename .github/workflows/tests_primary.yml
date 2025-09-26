@@ -144,9 +144,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v5
       with:
-        node-version: 18
+        node-version: 20
     - run: npm ci
     - run: npm run build
 
@@ -180,9 +180,9 @@ jobs:
       DEBUG_GIT_COMMIT_INFO: ""
     steps:
     - uses: actions/checkout@v5
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v5
       with:
-        node-version: 18
+        node-version: 20
     - run: npm ci
       env:
         DEBUG: pw:install
@@ -220,7 +220,7 @@ jobs:
         - macos-latest
         - windows-latest
     runs-on: ${{ matrix.os  }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       id-token: write   # This is required for OIDC login (azure/login) to succeed
       contents: read    # This is required for actions/checkout to succeed

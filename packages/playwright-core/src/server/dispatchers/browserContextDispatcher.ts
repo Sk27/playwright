@@ -22,9 +22,7 @@ import { ArtifactDispatcher } from './artifactDispatcher';
 import { CDPSessionDispatcher } from './cdpSessionDispatcher';
 import { DialogDispatcher } from './dialogDispatcher';
 import { Dispatcher } from './dispatcher';
-import { ElementHandleDispatcher } from './elementHandlerDispatcher';
 import { FrameDispatcher } from './frameDispatcher';
-import { JSHandleDispatcher } from './jsHandleDispatcher';
 import { APIRequestContextDispatcher, RequestDispatcher, ResponseDispatcher, RouteDispatcher } from './networkDispatchers';
 import { BindingCallDispatcher, PageDispatcher, WorkerDispatcher } from './pageDispatcher';
 import { CRBrowserContext } from '../chromium/crBrowser';
@@ -126,15 +124,7 @@ export class BrowserContextDispatcher extends Dispatcher<BrowserContext, channel
         const pageDispatcher = PageDispatcher.from(this, page);
         this._dispatchEvent('console', {
           page: pageDispatcher,
-          type: message.type(),
-          text: message.text(),
-          args: message.args().map(a => {
-            const elementHandle = a.asElement();
-            if (elementHandle)
-              return ElementHandleDispatcher.from(FrameDispatcher.from(this, elementHandle._frame), elementHandle);
-            return JSHandleDispatcher.fromJSHandle(pageDispatcher, a);
-          }),
-          location: message.location(),
+          ...pageDispatcher.serializeConsoleMessage(message),
         });
       }
     });
@@ -147,9 +137,6 @@ export class BrowserContextDispatcher extends Dispatcher<BrowserContext, channel
     context.dialogManager.addDialogHandler(this._dialogHandler);
 
     if (context._browser.options.name === 'chromium') {
-      for (const page of (context as CRBrowserContext).backgroundPages())
-        this._dispatchEvent('backgroundPage', { page: PageDispatcher.from(this, page) });
-      this.addObjectListener(CRBrowserContext.CREvents.BackgroundPage, page => this._dispatchEvent('backgroundPage', { page: PageDispatcher.from(this, page) }));
       for (const serviceWorker of (context as CRBrowserContext).serviceWorkers())
         this._dispatchEvent('serviceWorker', { worker: new WorkerDispatcher(this, serviceWorker) });
       this.addObjectListener(CRBrowserContext.CREvents.ServiceWorker, serviceWorker => this._dispatchEvent('serviceWorker', { worker: new WorkerDispatcher(this, serviceWorker) }));
@@ -164,6 +151,7 @@ export class BrowserContextDispatcher extends Dispatcher<BrowserContext, channel
       if (!redirectFromDispatcher && !this._shouldDispatchNetworkEvent(request, 'request') && !request.isNavigationRequest())
         return;
       const requestDispatcher = RequestDispatcher.from(this, request);
+      requestDispatcher.reportedThroughEvent = true;
       this._dispatchEvent('request', {
         request: requestDispatcher,
         page: PageDispatcher.fromNullable(this, request.frame()?._page.initializedOrUndefined())
@@ -199,6 +187,11 @@ export class BrowserContextDispatcher extends Dispatcher<BrowserContext, channel
         responseEndTiming: request._responseEndTiming,
         page: PageDispatcher.fromNullable(this, request.frame()?._page.initializedOrUndefined()),
       });
+    });
+    this.addObjectListener(BrowserContext.Events.RequestCollected, (request: Request) => {
+      const requestDispatcher = this.connection.existingDispatcher<RequestDispatcher>(request);
+      if (requestDispatcher && !requestDispatcher.reportedThroughEvent)
+        requestDispatcher._dispose('gc');
     });
     this.addObjectListener(BrowserContext.Events.RecorderEvent, ({ event, data, page, code }: { event: 'actionAdded' | 'actionUpdated' | 'signalAdded', data: any, page: Page, code: string }) => {
       this._dispatchEvent('recorderEvent', { event, data, code, page: PageDispatcher.from(this, page) });

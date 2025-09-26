@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
+import fs from 'fs';
+import path from 'path';
+
 import { debug } from 'playwright-core/lib/utilsBundle';
 
 import { logUnhandledError } from '../log';
 import { Tab } from './tab';
 import { outputFile  } from './config';
 import * as codegen from './codegen';
+import { dateAsFileName } from './tools/utils';
 
 import type * as playwright from '../../../types/test';
 import type { FullConfig } from './config';
-import type { Tool } from './tools/tool';
-import type { BrowserContextFactory, ClientInfo } from './browserContextFactory';
+import type { BrowserContextFactory, BrowserContextFactoryResult } from './browserContextFactory';
 import type * as actions from './actions';
 import type { SessionLog } from './sessionLog';
+import type { Tracing } from '../../../../playwright-core/src/client/tracing';
+import type { ClientInfo } from '../sdk/server';
 
 const testDebug = debug('pw:mcp:test');
 
 type ContextOptions = {
-  tools: Tool[];
   config: FullConfig;
   browserContextFactory: BrowserContextFactory;
   sessionLog: SessionLog | undefined;
@@ -39,11 +43,10 @@ type ContextOptions = {
 };
 
 export class Context {
-  readonly tools: Tool[];
   readonly config: FullConfig;
   readonly sessionLog: SessionLog | undefined;
   readonly options: ContextOptions;
-  private _browserContextPromise: Promise<{ browserContext: playwright.BrowserContext, close: () => Promise<void> }> | undefined;
+  private _browserContextPromise: Promise<BrowserContextFactoryResult> | undefined;
   private _browserContextFactory: BrowserContextFactory;
   private _tabs: Tab[] = [];
   private _currentTab: Tab | undefined;
@@ -55,7 +58,6 @@ export class Context {
   private _abortController = new AbortController();
 
   constructor(options: ContextOptions) {
-    this.tools = options.tools;
     this.config = options.config;
     this.sessionLog = options.sessionLog;
     this.options = options;
@@ -115,8 +117,8 @@ export class Context {
     return url;
   }
 
-  async outputFile(name: string): Promise<string> {
-    return outputFile(this.config, this._clientInfo.rootPath, name);
+  async outputFile(fileName: string, options: { origin: 'code' | 'llm' | 'web', reason: string }): Promise<string> {
+    return outputFile(this.config, this._clientInfo, fileName, options);
   }
 
   private _onPageCreated(page: playwright.Page) {
@@ -165,7 +167,21 @@ export class Context {
     await promise.then(async ({ browserContext, close }) => {
       if (this.config.saveTrace)
         await browserContext.tracing.stop();
-      await close();
+      const videos = browserContext.pages().map(page => page.video()).filter(video => !!video);
+      await close(async () => {
+        for (const video of videos) {
+          const name = await this.outputFile(dateAsFileName('webm'), { origin: 'code', reason: 'Saving video' });
+          await fs.promises.mkdir(path.dirname(name), { recursive: true });
+          const p = await video.path();
+          // video.saveAs() does not work for persistent contexts.
+          try {
+            if (fs.existsSync(p))
+              await fs.promises.rename(p, name);
+          } catch (e) {
+            logUnhandledError(e);
+          }
+        }
+      });
     });
   }
 
@@ -180,13 +196,18 @@ export class Context {
       await context.route('**', route => route.abort('blockedbyclient'));
 
       for (const origin of this.config.network.allowedOrigins)
-        await context.route(`*://${origin}/**`, route => route.continue());
+        await context.route(originOrHostGlob(origin), route => route.continue());
     }
 
     if (this.config.network?.blockedOrigins?.length) {
       for (const origin of this.config.network.blockedOrigins)
-        await context.route(`*://${origin}/**`, route => route.abort('blockedbyclient'));
+        await context.route(originOrHostGlob(origin), route => route.abort('blockedbyclient'));
     }
+  }
+
+  async ensureBrowserContext(): Promise<playwright.BrowserContext> {
+    const { browserContext } = await this._ensureBrowserContext();
+    return browserContext;
   }
 
   private _ensureBrowserContext() {
@@ -199,7 +220,7 @@ export class Context {
     return this._browserContextPromise;
   }
 
-  private async _setupBrowserContext(): Promise<{ browserContext: playwright.BrowserContext, close: () => Promise<void> }> {
+  private async _setupBrowserContext(): Promise<BrowserContextFactoryResult> {
     if (this._closeBrowserContextPromise)
       throw new Error('Another browser context is being closed.');
     // TODO: move to the browser context factory to make it based on isolation mode.
@@ -212,11 +233,11 @@ export class Context {
       this._onPageCreated(page);
     browserContext.on('page', page => this._onPageCreated(page));
     if (this.config.saveTrace) {
-      await browserContext.tracing.start({
-        name: 'trace',
-        screenshots: false,
+      await (browserContext.tracing as Tracing).start({
+        name: 'trace-' + Date.now(),
+        screenshots: true,
         snapshots: true,
-        sources: false,
+        _live: true,
       });
     }
     return result;
@@ -230,6 +251,18 @@ export class Context {
       code: `process.env['${secretName}']`,
     };
   }
+}
+
+function originOrHostGlob(originOrHost: string) {
+  try {
+    const url = new URL(originOrHost);
+    // localhost:1234 will parse as protocol 'localhost:' and 'null' origin.
+    if (url.origin !== 'null')
+      return `${url.origin}/**`;
+  } catch {
+  }
+  // Support for legacy host-only mode.
+  return `*://${originOrHost}/**`;
 }
 
 export class InputRecorder {

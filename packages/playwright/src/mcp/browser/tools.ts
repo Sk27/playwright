@@ -27,15 +27,16 @@ import navigate from './tools/navigate';
 import network from './tools/network';
 import pdf from './tools/pdf';
 import snapshot from './tools/snapshot';
-import tabs from './tools/tabs';
 import screenshot from './tools/screenshot';
+import tabs from './tools/tabs';
+import tracing from './tools/tracing';
 import wait from './tools/wait';
 import verify from './tools/verify';
 
 import type { Tool } from './tools/tool';
 import type { FullConfig } from './config';
 
-export const allTools: Tool<any>[] = [
+export const browserTools: Tool<any>[] = [
   ...common,
   ...console,
   ...dialogs,
@@ -51,10 +52,18 @@ export const allTools: Tool<any>[] = [
   ...screenshot,
   ...snapshot,
   ...tabs,
+  ...tracing,
   ...wait,
   ...verify,
 ];
 
+// FIXME: this is ugly, fix VSCode!
+const customPrefix = process.env.PLAYWRIGHT_MCP_TOOL_PREFIX;
+if (customPrefix) {
+  for (const tool of browserTools)
+    tool.schema.name = customPrefix + tool.schema.name;
+}
+
 export function filteredTools(config: FullConfig) {
-  return allTools.filter(tool => tool.capability.startsWith('core') || config.capabilities?.includes(tool.capability));
+  return browserTools.filter(tool => tool.capability.startsWith('core') || config.capabilities?.includes(tool.capability));
 }

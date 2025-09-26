@@ -20,18 +20,23 @@ import type { ConfigLocation } from '../../common/config';
 
 export class TestContext {
   private _testRunner: TestRunner | undefined;
-  readonly configLocation: ConfigLocation;
-  readonly options?: { muteConsole?: boolean };
+  readonly options?: { muteConsole?: boolean, headless?: boolean };
+  configLocation!: ConfigLocation;
+  rootPath!: string;
 
-  constructor(configLocation: ConfigLocation, options?: { muteConsole?: boolean }) {
-    this.configLocation = configLocation;
+  constructor(options?: { muteConsole?: boolean, headless?: boolean }) {
     this.options = options;
+  }
+
+  initialize(rootPath: string | undefined, configLocation: ConfigLocation) {
+    this.configLocation = configLocation;
+    this.rootPath = rootPath || configLocation.configDir;
   }
 
   async createTestRunner(): Promise<TestRunner> {
     if (this._testRunner)
       await this._testRunner.stopTests();
-    const testRunner = new TestRunner(this.configLocation, {});
+    const testRunner = new TestRunner(this.configLocation!, {});
     await testRunner.initialize({});
     this._testRunner = testRunner;
     testRunner.on(TestRunnerEvent.TestFilesChanged, testFiles => {
