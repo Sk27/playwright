@@ -210,24 +210,23 @@ export async function initClaudeCodeRepo() {
 }
 
 const vscodeToolMap = new Map<string, string[]>([
-  ['ls', ['listDirectory', 'fileSearch']],
-  ['grep', ['textSearch']],
-  ['read', ['readFile']],
-  ['edit', ['editFiles']],
-  ['write', ['createFile', 'createDirectory']],
+  ['ls', ['search/listDirectory', 'search/fileSearch']],
+  ['grep', ['search/textSearch']],
+  ['read', ['search/readFile']],
+  ['edit', ['edit/editFiles']],
+  ['write', ['edit/createFile', 'edit/createDirectory']],
 ]);
-const vscodeToolsOrder = ['createFile', 'createDirectory', 'editFiles', 'fileSearch', 'textSearch', 'listDirectory', 'readFile'];
-const vscodeToolPrefix = 'test_'; // FIXME: this is ugly, fix VSCode!
-
+const vscodeToolsOrder = ['edit/createFile', 'edit/createDirectory', 'edit/editFiles', 'search/fileSearch', 'search/textSearch', 'search/listDirectory', 'search/readFile'];
+const vscodeMcpName = 'playwright-test';
 function saveAsVSCodeChatmode(agent: Agent): string {
   function asVscodeTool(tool: string): string | string[] {
     const [first, second] = tool.split('/');
     if (second)
-      return second.startsWith('browser_') ? vscodeToolPrefix + second : second;
+      return `${vscodeMcpName}/${second}`;
     return vscodeToolMap.get(first) || first;
   }
   const tools = agent.header.tools.map(asVscodeTool).flat().sort((a, b) => {
-    // VSCode insisits on the specific tools order when editing agent config.
+    // VSCode insists on the specific tools order when editing agent config.
     const indexA = vscodeToolsOrder.indexOf(a);
     const indexB = vscodeToolsOrder.indexOf(b);
     if (indexA === -1 && indexB === -1)
@@ -278,7 +277,7 @@ export async function initVSCodeRepo() {
     type: 'stdio',
     command: commonMcpServers.playwrightTest.command,
     args: commonMcpServers.playwrightTest.args,
-    env: { 'PLAYWRIGHT_MCP_TOOL_PREFIX': vscodeToolPrefix },
+    cwd: '${workspaceFolder}',
   };
   await writeFile(mcpJsonPath, JSON.stringify(mcpJson, null, 2));
 }

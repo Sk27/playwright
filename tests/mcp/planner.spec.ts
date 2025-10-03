@@ -18,10 +18,11 @@ import { test, expect, writeFiles } from './fixtures';
 
 import fs from 'fs';
 import path from 'path';
+import url from 'url';
 
 test.use({ mcpServerType: 'test-mcp' });
 
-test('test_setup_page', async ({ startClient }) => {
+test('planner_setup_page', async ({ startClient }) => {
   await writeFiles({
     'a.test.ts': `
       import { test, expect } from '@playwright/test';
@@ -35,13 +36,12 @@ test('test_setup_page', async ({ startClient }) => {
 
   const { client } = await startClient();
   const response = await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'a.test.ts',
     },
   });
 
-  expect(response).toHaveTextResponse(expect.stringContaining(`### Seed test\nFile: a.test.ts`));
   expect(response).toHaveTextResponse(expect.stringContaining(`### Paused at end of test. ready for interaction
 
 ### Page state
@@ -65,7 +65,7 @@ test('test_setup_page', async ({ startClient }) => {
   });
 });
 
-test('test_setup_page seed resolution', async ({ startClient }) => {
+test('planner_setup_page seed resolution', async ({ startClient }) => {
   await writeFiles({
     'playwright.config.ts': `
       module.exports = {
@@ -84,7 +84,7 @@ test('test_setup_page seed resolution', async ({ startClient }) => {
 
   // Relative to test dir.
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'seed.test.ts',
     },
@@ -92,21 +92,21 @@ test('test_setup_page seed resolution', async ({ startClient }) => {
 
   // Relative to config dir.
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'tests/seed.test.ts',
     },
   })).toHaveTextResponse(expect.stringContaining(`### Paused at end of test.`));
 });
 
-test('test_setup_page seed resolution - cwd', async ({ startClient }) => {
+test('planner_setup_page seed resolution - rootPath', async ({ startClient }) => {
   await writeFiles({
-    'configs/playwright.config.ts': `
+    'packages/my-app/configs/playwright.config.ts': `
       module.exports = {
         testDir: '../tests',
       };
     `,
-    'tests/seed.test.ts': `
+    'packages/my-app/tests/seed.test.ts': `
       import { test, expect } from '@playwright/test';
       test('template', async ({ page }) => {
         await page.setContent('<button>Submit</button>');
@@ -115,18 +115,19 @@ test('test_setup_page seed resolution - cwd', async ({ startClient }) => {
   });
 
   const { client } = await startClient({
-    args: ['--config=configs/playwright.config.ts'],
+    args: ['--config=packages/my-app/configs/playwright.config.ts'],
+    roots: [{ name: 'root', uri: url.pathToFileURL(test.info().outputPath('')).toString() }],
   });
 
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
-      seedFile: 'tests/seed.test.ts',
+      seedFile: 'packages/my-app/tests/seed.test.ts',
     },
   })).toHaveTextResponse(expect.stringContaining(`### Paused at end of test.`));
 });
 
-test('test_setup_page with dependencies', async ({ startClient }) => {
+test('planner_setup_page with dependencies', async ({ startClient }) => {
   const baseDir = await writeFiles({
     'playwright.config.ts': `
       module.exports = {
@@ -153,7 +154,7 @@ test('test_setup_page with dependencies', async ({ startClient }) => {
 
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'seed.test.ts',
       project: 'chromium',
@@ -166,7 +167,7 @@ test('test_setup_page with dependencies', async ({ startClient }) => {
   expect(fs.existsSync(path.join(baseDir, 'test-results', 'seed-template-ignored', 'template.txt'))).toBe(false);
 });
 
-test('test_setup_page (loading error)', async ({ startClient }) => {
+test('planner_setup_page (loading error)', async ({ startClient }) => {
   await writeFiles({
     'seed.test.ts': `
       throw new Error('loading error');
@@ -174,33 +175,35 @@ test('test_setup_page (loading error)', async ({ startClient }) => {
   });
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'seed.test.ts',
     },
   })).toHaveTextResponse(expect.stringContaining('Error: loading error'));
 });
 
-test('test_setup_page (wrong test location)', async ({ startClient }) => {
+test('planner_setup_page (wrong test location)', async ({ startClient }) => {
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {
       seedFile: 'a.test.ts',
     },
-  })).toHaveTextResponse(`### Result
-Error: seed test not found.`);
+  })).toEqual({
+    content: [{ type: 'text', text: `Error: seed test not found.` }],
+    isError: true,
+  });
 });
 
-test('test_setup_page (no test location)', async ({ startClient }) => {
+test('planner_setup_page (no test location)', async ({ startClient }) => {
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {},
   })).toHaveTextResponse(expect.stringContaining(`### Paused at end of test. ready for interaction`));
 });
 
-test('test_setup_page chooses top-level project', async ({ startClient }) => {
+test('planner_setup_page chooses top-level project', async ({ startClient }) => {
   const baseDir = await writeFiles({
     'playwright.config.ts': `
       module.exports = {
@@ -214,7 +217,7 @@ test('test_setup_page chooses top-level project', async ({ startClient }) => {
 
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {},
   })).toHaveTextResponse(expect.stringContaining(`### Paused at end of test. ready for interaction`));
 
@@ -222,7 +225,7 @@ test('test_setup_page chooses top-level project', async ({ startClient }) => {
   expect(fs.existsSync(path.join(baseDir, 'two', 'seed.spec.ts'))).toBe(true);
 });
 
-test('test_setup_page without location respects testsDir', async ({ startClient }) => {
+test('planner_setup_page without location respects testsDir', async ({ startClient }) => {
   await writeFiles({
     'playwright.config.ts': `
       module.exports = {
@@ -240,7 +243,7 @@ test('test_setup_page without location respects testsDir', async ({ startClient 
 
   const { client } = await startClient();
   expect(await client.callTool({
-    name: 'test_setup_page',
+    name: 'planner_setup_page',
     arguments: {},
   })).toHaveTextResponse(expect.stringContaining(`### Paused at end of test. ready for interaction`));
 

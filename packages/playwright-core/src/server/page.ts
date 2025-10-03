@@ -353,8 +353,7 @@ export class Page extends SdkObject {
 
   addNetworkRequest(request: network.Request) {
     this._networkRequests.push(request);
-    for (const collected of ensureArrayLimit(this._networkRequests, 100))
-      this.emitOnContext(BrowserContext.Events.RequestCollected, collected);
+    ensureArrayLimit(this._networkRequests, 100);
   }
 
   networkRequests() {
@@ -756,7 +755,9 @@ export class Page extends SdkObject {
       this.closeReason = options.reason;
     const runBeforeUnload = !!options.runBeforeUnload;
     if (this._closedState !== 'closing') {
-      this._closedState = 'closing';
+      // If runBeforeUnload is true, we don't know if we will close, so don't modify the state
+      if (!runBeforeUnload)
+        this._closedState = 'closing';
       // This might throw if the browser context containing the page closes
       // while we are trying to close the page.
       await this.delegate.closePage(runBeforeUnload).catch(e => debugLogger.log('error', e));
